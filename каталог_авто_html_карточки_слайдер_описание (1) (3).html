@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Каталог авто</title>
+  <style>
+    :root { --bg:#0b0c10; --panel:#111318; --txt:#e8eef2; --muted:#a7b0b8; --brand:#ffd54a; --accent:#3fa9f5; }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji"}
+    header{padding:24px 16px;position:sticky;top:0;background:linear-gradient(180deg,rgba(11,12,16,.95),rgba(11,12,16,.8));backdrop-filter:saturate(140%) blur(6px);z-index:10;border-bottom:1px solid #1b1e26}
+    .container{max-width:1200px;margin:0 auto}
+    h1{margin:0;font-weight:800;letter-spacing:.2px}
+    h1 span{color:var(--brand)}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    input,select{background:#0f1116;border:1px solid #232a35;color:var(--txt);padding:10px 12px;border-radius:10px;outline:none}
+    input::placeholder{color:#7e8791}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px;padding:16px}
+    .card{background:var(--panel);border:1px solid #1f2430;border-radius:16px;overflow:hidden;box-shadow:0 8px 18px rgba(0,0,0,.25)}
+    .badge{position:absolute;inset:auto auto 10px 10px;background:rgba(0,0,0,.6);color:#fff;padding:6px 10px;border-radius:999px;font-size:12px}
+    .media{position:relative;background:#0b0d12}
+    .slider{position:relative;width:100%;aspect-ratio:16/10;overflow:hidden}
+    .slide{position:absolute;inset:0;opacity:0;transition:opacity .35s ease}
+    .slide.active{opacity:1}
+    .slide img{width:100%;height:100%;object-fit:cover;display:block}
+    .nav{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:0 6px;pointer-events:none}
+    .nav button{pointer-events:auto;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.15);color:#fff;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;cursor:pointer}
+    .thumbs{display:flex;gap:6px;flex-wrap:nowrap;overflow:auto;padding:8px;background:#0e1016;border-top:1px solid #1b1f2a}
+    .thumbs img{width:60px;height:44px;object-fit:cover;border-radius:8px;opacity:.6;cursor:pointer;border:1px solid #242a37}
+    .thumbs img.active{opacity:1;outline:2px solid var(--brand)}
+    .body{padding:14px}
+    .title{font-weight:800;font-size:18px;margin:0 0 6px}
+    .specs{width:100%;border-collapse:collapse;margin:10px 0}
+    .specs th,.specs td{border-bottom:1px solid #1e2531;padding:8px 6px;text-align:left;font-size:14px}
+    .specs th{color:#aeb8c3;font-weight:600;width:40%}
+    .desc{color:var(--muted);font-size:14px;margin-top:8px}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid #263041;border-radius:999px;font-size:12px;color:#c9d3dd;background:#101520}
+    footer{padding:24px 16px;color:#99a5b2}
+    .empty{opacity:.75;padding:24px;text-align:center}
+  </style>
+</head>
+<body>
+<header>
+  <div class="container">
+    <h1>Каталог <span>авто</span></h1>
+    <div class="controls">
+      <input id="q" type="search" placeholder="Поиск: бренд, модель..." />
+      <select id="bodyFilter"><option value="">Кузов: любой</option></select>
+      <select id="fuelFilter"><option value="">Топливо: любое</option></select>
+      <select id="driveFilter"><option value="">Привод: любой</option></select>
+      <select id="regionFilter"><option value="">Регион: любой</option></select>
+      <select id="budgetFilter"><option value="">Бюджет: любой</option>
+        <option>10-15</option><option>15-20</option><option>20-25</option><option>25-30</option><option>30+</option>
+      </select>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <div id="grid" class="grid"></div>
+  <div id="empty" class="empty" style="display:none">Ничего не найдено. Измените фильтры или запрос.</div>
+</main>
+
+<footer class="container">
+  Сделано для Telegram/сайта: карточки с 5 фото (слайдер), характеристиками и кратким описанием. Вставьте ссылки на изображения из Copart/IAAI/Bid.Cars.
+</footer>
+
+<script>
+// === 1) ДАННЫЕ ===
+// Заполните массив ниже для КАЖДОЙ модели. Для фото вставляйте ПРЯМЫЕ URL картинок (правый клик → Copy image address).
+// Минимум 5 ссылок на фото в массиве images.
+// Поля: brand, model, year (опц.), bodyType, fuelType, driveType, region, budget, description, images[]
+// Можно сгенерировать автоматически из вашей таблицы, но для Telegram/сайта удобнее собирать вручную точные URL фото лотов.
+
+window.CATALOG = [
+  // ==== Примеры (замените своими данными и ссылками на фото) ====
+  {
+    brand: "Acura",
+    model: "MDX",
+    year: "2017",
+    bodyType: "кроссовер",
+    fuelType: "бензин",
+    driveType: "передний, полный",
+    region: "Японія/США",
+    budget: "15-20",
+    description: "Трёхрядный семейный кроссовер. Экономичен для класса, комфортная подвеска, надёжный V6. Хорош для города и дальних поездок.",
+    images: [
+      "https://via.placeholder.com/1200x800?text=Acura+MDX+1",
+      "https://via.placeholder.com/1200x800?text=Acura+MDX+2",
+      "https://via.placeholder.com/1200x800?text=Acura+MDX+3",
+      "https://via.placeholder.com/1200x800?text=Acura+MDX+4",
+      "https://via.placeholder.com/1200x800?text=Acura+MDX+5"
+    ]
+  },
+  {
+    brand: "Audi",
+    model: "Q5",
+    year: "2019",
+    bodyType: "кроссовер",
+    fuelType: "бензин",
+    driveType: "полный",
+    region: "Німеччина",
+    budget: "25-30",
+    description: "Премиальный кроссовер с отличной шумоизоляцией и управляемостью. Подходит для семьи и активных поездок.",
+    images: [
+      "https://via.placeholder.com/1200x800?text=Audi+Q5+1",
+      "https://via.placeholder.com/1200x800?text=Audi+Q5+2",
+      "https://via.placeholder.com/1200x800?text=Audi+Q5+3",
+      "https://via.placeholder.com/1200x800?text=Audi+Q5+4",
+      "https://via.placeholder.com/1200x800?text=Audi+Q5+5"
+    ]
+  },
+  {
+    brand: "Toyota",
+    model: "Camry",
+    year: "2018",
+    bodyType: "седан",
+    fuelType: "бензин",
+    driveType: "передний",
+    region: "Японія/США",
+    budget: "15-20",
+    description: "Надёжный бизнес‑седан: низкая стоимость владения, выдержанная эргономика, высокий ресурс агрегатов.",
+    images: [
+      "https://via.placeholder.com/1200x800?text=Camry+1",
+      "https://via.placeholder.com/1200x800?text=Camry+2",
+      "https://via.placeholder.com/1200x800?text=Camry+3",
+      "https://via.placeholder.com/1200x800?text=Camry+4",
+      "https://via.placeholder.com/1200x800?text=Camry+5"
+    ]
+  }
+];
+
+// === 2) ПОИСК/ФИЛЬТРЫ ===
+const Q = document.querySelector('#q');
+const Fbody = document.querySelector('#bodyFilter');
+const Ffuel = document.querySelector('#fuelFilter');
+const Fdrive = document.querySelector('#driveFilter');
+const Fregion = document.querySelector('#regionFilter');
+const Fbudget = document.querySelector('#budgetFilter');
+const grid = document.querySelector('#grid');
+const empty = document.querySelector('#empty');
+
+function unique(list){ return [...new Set(list.filter(Boolean))].sort(); }
+function populateFilters(){
+  const bodies = unique(window.CATALOG.map(x=>x.bodyType));
+  const fuels = unique(window.CATALOG.map(x=>x.fuelType));
+  const drives = unique(window.CATALOG.map(x=>x.driveType));
+  const regions = unique(window.CATALOG.map(x=>x.region));
+  for(const v of bodies){ Fbody.insertAdjacentHTML('beforeend', `<option>${v}</option>`); }
+  for(const v of fuels){ Ffuel.insertAdjacentHTML('beforeend', `<option>${v}</option>`); }
+  for(const v of drives){ Fdrive.insertAdjacentHTML('beforeend', `<option>${v}</option>`); }
+  for(const v of regions){ Fregion.insertAdjacentHTML('beforeend', `<option>${v}</option>`); }
+}
+
+function passFilters(it){
+  const q = (Q.value||'').toLowerCase().trim();
+  if(q){
+    const hay = `${it.brand} ${it.model} ${it.bodyType} ${it.fuelType} ${it.driveType} ${it.region} ${it.budget}`.toLowerCase();
+    if(!hay.includes(q)) return false;
+  }
+  if(Fbody.value && it.bodyType !== Fbody.value) return false;
+  if(Ffuel.value && it.fuelType !== Ffuel.value) return false;
+  if(Fdrive.value && it.driveType !== Fdrive.value) return false;
+  if(Fregion.value && it.region !== Fregion.value) return false;
+  if(Fbudget.value && it.budget !== Fbudget.value) return false;
+  return true;
+}
+
+function render(){
+  grid.innerHTML = '';
+  const items = window.CATALOG.filter(passFilters);
+  empty.style.display = items.length ? 'none' : 'block';
+  for(const item of items){ grid.appendChild(renderCard(item)); }
+}
+
+// === 3) КАРТОЧКА С СОБСТВЕННЫМ СЛАЙДЕРОМ ===
+function renderCard(item){
+  const card = document.createElement('article');
+  card.className = 'card';
+  const id = Math.random().toString(36).slice(2);
+  const images = Array.isArray(item.images) ? item.images.slice(0,10) : [];
+  const first = images[0] || 'https://via.placeholder.com/1200x800?text=No+Image';
+  card.innerHTML = `
+    <div class="media">
+      <div class="slider" data-id="${id}">
+        ${images.map((src,i)=>`<div class="slide ${i===0?'active':''}"><img loading="lazy" src="${src}" alt="${item.brand} ${item.model} photo ${i+1}"/></div>`).join('')}
+        <div class="nav">
+          <button aria-label="prev" data-prev>‹</button>
+          <button aria-label="next" data-next>›</button>
+        </div>
+        <span class="badge">${item.images?.length||0} фото</span>
+      </div>
+      <div class="thumbs" role="tablist">
+        ${images.map((src,i)=>`<img ${i===0?'class="active"':''} src="${src}" alt="thumb ${i+1}" data-index="${i}"/>`).join('')}
+      </div>
+    </div>
+    <div class="body">
+      <h2 class="title">${item.brand} ${item.model}${item.year?` ${item.year}`:''}</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px">
+        <span class="pill">${item.bodyType}</span>
+        <span class="pill">${item.fuelType}</span>
+        <span class="pill">${item.driveType}</span>
+        <span class="pill">${item.region}</span>
+        <span class="pill">Бюджет: ${item.budget}</span>
+      </div>
+      <table class="specs">
+        <tr><th>Кузов</th><td>${item.bodyType}</td></tr>
+        <tr><th>Топливо</th><td>${item.fuelType}</td></tr>
+        <tr><th>Привод</th><td>${item.driveType}</td></tr>
+        <tr><th>Регион</th><td>${item.region}</td></tr>
+        <tr><th>Бюджет</th><td>${item.budget}</td></tr>
+      </table>
+      <p class="desc">${item.description||''}</p>
+    </div>
+  `;
+  // Логика слайдера
+  const slider = card.querySelector('.slider');
+  const slides = [...slider.querySelectorAll('.slide')];
+  const thumbs = card.querySelectorAll('.thumbs img');
+  let idx = 0;
+  const show = (i)=>{
+    idx = (i+slides.length)%slides.length;
+    slides.forEach((s,j)=>s.classList.toggle('active', j===idx));
+    thumbs.forEach((t,j)=>t.classList.toggle('active', j===idx));
+  };
+  slider.querySelector('[data-prev]').addEventListener('click', ()=>show(idx-1));
+  slider.querySelector('[data-next]').addEventListener('click', ()=>show(idx+1));
+  thumbs.forEach((t)=> t.addEventListener('click', ()=>show(parseInt(t.dataset.index,10))));
+  return card;
+}
+
+// === 4) ИНИЦ ===
+populateFilters();
+[Q,Fbody,Ffuel,Fdrive,Fregion,Fbudget].forEach(el=>el.addEventListener('input', render));
+render();
+</script>
+</body>
+</html>
